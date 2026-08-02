@@ -231,8 +231,13 @@ def get_asset_file(asset_id: uuid.UUID, db: Session = Depends(get_db)) -> FileRe
 @router.post("/projects/{project_id}/generations", response_model=JobOut, status_code=202)
 def create_generation(project_id: uuid.UUID, payload: GenerationRequest, background: BackgroundTasks, db: Session = Depends(get_db)) -> JobOut:
     project = _project_or_404(db, project_id)
-    _validate_project_assets(db, project.id, [*payload.menu_asset_ids, *payload.reference_asset_ids])
-    prompt = build_initial_prompt(project.brief)
+    _validate_project_assets(db, project.id, [*payload.menu_asset_ids, *payload.logo_asset_ids, *payload.reference_asset_ids])
+    prompt = build_initial_prompt(
+        project.brief,
+        has_menu_images=bool(payload.menu_asset_ids),
+        has_logo_images=bool(payload.logo_asset_ids),
+        has_reference_images=bool(payload.reference_asset_ids),
+    )
     job = GenerationJob(
         project_id=project.id,
         type=GenerationJobType.initial,
@@ -244,6 +249,7 @@ def create_generation(project_id: uuid.UUID, payload: GenerationRequest, backgro
             "width": project.brief.width,
             "height": project.brief.height,
             "menu_asset_ids": [str(item) for item in payload.menu_asset_ids],
+            "logo_asset_ids": [str(item) for item in payload.logo_asset_ids],
             "reference_asset_ids": [str(item) for item in payload.reference_asset_ids],
         },
     )
@@ -296,7 +302,11 @@ def create_edit(version_id: uuid.UUID, payload: EditRequest, background: Backgro
         f"- 위치: x {item.x}, y {item.y}, width {item.width}, height {item.height}; 요청: {item.note}"
         for item in annotations
     ]
-    prompt = build_edit_prompt(build_initial_prompt(project.brief), lines, payload.edit_text)
+    prompt = build_edit_prompt(
+        build_initial_prompt(project.brief, has_menu_images=True, has_logo_images=True),
+        lines,
+        payload.edit_text,
+    )
     job = GenerationJob(
         project_id=project.id,
         source_version_id=version.id,

@@ -36,6 +36,7 @@ def _payload_asset_ids(job: GenerationJob) -> list[uuid.UUID]:
     payload = job.request_payload or {}
     raw_ids = [
         *(payload.get("menu_asset_ids") or []),
+        *(payload.get("logo_asset_ids") or []),
         *(payload.get("reference_asset_ids") or []),
         *(payload.get("additional_asset_ids") or []),
     ]

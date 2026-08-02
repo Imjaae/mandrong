@@ -71,6 +71,7 @@ class AssetOut(BaseModel):
 
 class GenerationRequest(BaseModel):
     menu_asset_ids: list[UUID] = Field(default_factory=list)
+    logo_asset_ids: list[UUID] = Field(default_factory=list)
     reference_asset_ids: list[UUID] = Field(default_factory=list)
 
 

@@ -52,10 +52,10 @@ export const api = {
     form.append('file', file)
     return request<Asset>(`/api/v1/projects/${projectId}/assets`, { method: 'POST', body: form })
   },
-  createGeneration(projectId: string, menuAssetIds: string[], referenceAssetIds: string[]) {
+  createGeneration(projectId: string, menuAssetIds: string[], logoAssetIds: string[], referenceAssetIds: string[]) {
     return request<{ job_id: string; status: string }>(`/api/v1/projects/${projectId}/generations`, {
       method: 'POST',
-      body: JSON.stringify({ menu_asset_ids: menuAssetIds, reference_asset_ids: referenceAssetIds }),
+      body: JSON.stringify({ menu_asset_ids: menuAssetIds, logo_asset_ids: logoAssetIds, reference_asset_ids: referenceAssetIds }),
     })
   },
   getGenerationJob(jobId: string) {

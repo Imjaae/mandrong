@@ -44,7 +44,7 @@ onMounted(async () => {
   }, 2600)
   try {
     const projectId = String(route.params.id)
-    const job = await api.createGeneration(projectId, draft.menuAssetIds, draft.referenceAssetIds)
+    const job = await api.createGeneration(projectId, draft.menuAssetIds, draft.logoAssetIds, draft.referenceAssetIds)
     await poll(job.job_id)
   } catch (err) {
     error.value = err instanceof Error ? err.message : '생성을 시작하지 못했어요.'

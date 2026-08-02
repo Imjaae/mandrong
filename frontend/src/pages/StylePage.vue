@@ -31,6 +31,7 @@ async function submit() {
     const project = await api.createProject(draft.title, draft.brief)
     draft.projectId = project.id
     draft.menuAssetIds = []
+    draft.logoAssetIds = []
     draft.referenceAssetIds = []
     for (const file of draft.menuFiles) {
       const asset = await api.uploadAsset(project.id, 'menu_photo', file)
@@ -42,7 +43,7 @@ async function submit() {
     }
     if (draft.useLogo && draft.logoFile) {
       const asset = await api.uploadAsset(project.id, 'reference_image', draft.logoFile)
-      draft.referenceAssetIds.push(asset.id)
+      draft.logoAssetIds.push(asset.id)
     }
     router.push(`/projects/${project.id}/generate`)
   } catch (err) {
