@@ -26,13 +26,20 @@ onUnmounted(() => {
   }
 })
 
-function triggerDownload(url: string, format: 'png' | 'jpeg' | 'pdf') {
+async function triggerDownload(url: string, format: 'png' | 'jpeg' | 'pdf') {
+  const response = await fetch(apiUrl(url))
+  if (!response.ok) {
+    throw new Error('다운로드 파일을 가져오지 못했어요.')
+  }
+  const blob = await response.blob()
+  const objectUrl = URL.createObjectURL(blob)
   const link = document.createElement('a')
-  link.href = apiUrl(url)
+  link.href = objectUrl
   link.download = `mandrong-${String(route.params.versionId).slice(0, 8)}.${format === 'jpeg' ? 'jpg' : format}`
   document.body.appendChild(link)
   link.click()
   link.remove()
+  URL.revokeObjectURL(objectUrl)
 }
 
 async function waitForExport(exportJobId: string, format: 'png' | 'jpeg' | 'pdf') {
@@ -55,7 +62,7 @@ async function waitForExport(exportJobId: string, format: 'png' | 'jpeg' | 'pdf'
         exportTimer = 0
         exportingFormat.value = ''
         exportMessage.value = '다운로드를 시작했어요.'
-        triggerDownload(job.download_url, format)
+        await triggerDownload(job.download_url, format)
       }
       if (job.status === 'failed') {
         window.clearInterval(exportTimer)
