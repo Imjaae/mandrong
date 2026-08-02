@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import base64
+import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
 from openai import OpenAI
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -67,6 +68,18 @@ def _input_image_assets(db: Session, job: GenerationJob) -> list[Asset]:
     return list(unique.values())
 
 
+def _prepare_openai_input_image(source_path: Path, temp_dir: Path, index: int) -> Path:
+    output_path = temp_dir / f"input-{index}.png"
+    with Image.open(source_path) as image:
+        image = ImageOps.exif_transpose(image)
+        if image.mode not in {"RGB", "RGBA"}:
+            image = image.convert("RGBA")
+        if max(image.size) > 2048:
+            image.thumbnail((2048, 2048), Image.Resampling.LANCZOS)
+        image.save(output_path, format="PNG", optimize=True)
+    return output_path
+
+
 def run_generation_job(job_id: uuid.UUID) -> None:
     ensure_storage_dirs()
     from app.db.session import SessionLocal
@@ -96,24 +109,27 @@ def run_generation_job(job_id: uuid.UUID) -> None:
             input_assets = _input_image_assets(db, job)
             image_files = []
             try:
-                for asset in input_assets:
-                    image_path = full_path(asset.storage_path)
-                    if image_path.exists():
-                        image_files.append(image_path.open("rb"))
+                with tempfile.TemporaryDirectory() as temp_name:
+                    temp_dir = Path(temp_name)
+                    for index, asset in enumerate(input_assets, start=1):
+                        image_path = full_path(asset.storage_path)
+                        if image_path.exists():
+                            prepared_path = _prepare_openai_input_image(image_path, temp_dir, index)
+                            image_files.append(prepared_path.open("rb"))
 
-                if image_files:
-                    result = client.images.edit(
-                        model="gpt-image-2",
-                        image=image_files,
-                        prompt=job.prompt_text,
-                        size=f"{brief.width}x{brief.height}",
-                    )
-                else:
-                    result = client.images.generate(
-                        model="gpt-image-2",
-                        prompt=job.prompt_text,
-                        size=f"{brief.width}x{brief.height}",
-                    )
+                    if image_files:
+                        result = client.images.edit(
+                            model="gpt-image-2",
+                            image=image_files,
+                            prompt=job.prompt_text,
+                            size=f"{brief.width}x{brief.height}",
+                        )
+                    else:
+                        result = client.images.generate(
+                            model="gpt-image-2",
+                            prompt=job.prompt_text,
+                            size=f"{brief.width}x{brief.height}",
+                        )
             finally:
                 for image_file in image_files:
                     image_file.close()
