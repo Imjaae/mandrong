@@ -234,9 +234,9 @@ def create_generation(project_id: uuid.UUID, payload: GenerationRequest, backgro
     _validate_project_assets(db, project.id, [*payload.menu_asset_ids, *payload.logo_asset_ids, *payload.reference_asset_ids])
     prompt = build_initial_prompt(
         project.brief,
-        has_menu_images=bool(payload.menu_asset_ids),
+        menu_image_count=len(payload.menu_asset_ids),
         has_logo_images=bool(payload.logo_asset_ids),
-        has_reference_images=bool(payload.reference_asset_ids),
+        reference_image_count=len(payload.reference_asset_ids),
     )
     job = GenerationJob(
         project_id=project.id,
@@ -303,7 +303,7 @@ def create_edit(version_id: uuid.UUID, payload: EditRequest, background: Backgro
         for item in annotations
     ]
     prompt = build_edit_prompt(
-        build_initial_prompt(project.brief, has_menu_images=True, has_logo_images=True),
+        build_initial_prompt(project.brief, menu_image_count=1, has_logo_images=True),
         lines,
         payload.edit_text,
     )

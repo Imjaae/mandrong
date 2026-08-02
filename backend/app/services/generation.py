@@ -65,8 +65,7 @@ def _openai_input_image_assets(db: Session, job: GenerationJob) -> list[Asset]:
             if source_asset:
                 assets.append(source_asset)
 
-    # Reference images are intentionally excluded. They may contain logos/text from other brands.
-    assets.extend(_assets_from_payload(db, job, ["menu_asset_ids", "additional_asset_ids"]))
+    assets.extend(_assets_from_payload(db, job, ["menu_asset_ids", "reference_asset_ids", "additional_asset_ids"]))
 
     unique: dict[uuid.UUID, Asset] = {}
     for asset in assets:

@@ -1,7 +1,13 @@
 from app.models import CreativeBrief
 
 
-def build_initial_prompt(brief: CreativeBrief, *, has_menu_images: bool = False, has_logo_images: bool = False, has_reference_images: bool = False) -> str:
+def build_initial_prompt(
+    brief: CreativeBrief,
+    *,
+    menu_image_count: int = 0,
+    has_logo_images: bool = False,
+    reference_image_count: int = 0,
+) -> str:
     mood = ", ".join(brief.mood_keywords or [])
     promotion_text = brief.secondary_copy or brief.primary_copy
     lines = [
@@ -16,9 +22,11 @@ def build_initial_prompt(brief: CreativeBrief, *, has_menu_images: bool = False,
         f"연락처/주문 방법: {brief.contact or '없음'}",
         f"분위기 키워드: {mood or '없음'}",
         f"추가 분위기: {brief.mood_text or '없음'}",
-        "첨부 이미지는 역할별로 다르게 사용한다. 메뉴 사진과 로고는 선택 장식이 아니라 필수 재료다.",
+        "첨부 이미지는 역할별로 다르게 사용한다.",
+        f"입력 이미지 순서: 메뉴 사진 {menu_image_count}장 다음에 참고 디자인 이미지 {reference_image_count}장이 온다.",
+        "메뉴 사진은 최종 홍보물의 실제 음식 재료이고, 참고 디자인 이미지는 스타일 참고용이다.",
     ]
-    if has_menu_images:
+    if menu_image_count > 0:
         lines.extend(
             [
                 "메뉴 사진: 첨부된 실제 음식의 형태, 색감, 질감, 플레이팅을 최종 홍보물의 가장 중요한 시각 요소로 크게 배치한다.",
@@ -34,11 +42,14 @@ def build_initial_prompt(brief: CreativeBrief, *, has_menu_images: bool = False,
                 "상단 왼쪽 또는 하단 왼쪽에 실제 로고가 들어갈 깨끗한 여백을 확보한다.",
             ]
         )
-    if has_reference_images:
+    if reference_image_count > 0:
         lines.extend(
             [
-                "참고 디자인 이미지: 색감, 여백, 정보 위계, 구도만 참고한다.",
-                "참고 디자인 이미지에 있는 브랜드명, 로고, 문구, 음식 사진, 캐릭터, 고유 그래픽 요소는 절대 복사하지 않는다.",
+                "참고 디자인 이미지: 색감, 여백, 정보 위계, 구도, 대비, 사진 배치 방식만 참고한다.",
+                "참고 디자인 이미지의 브랜드명, 로고, 문구, 가격, 메뉴명, 음식 사진, 캐릭터, 고유 그래픽 요소는 절대 복사하지 않는다.",
+                "참고 디자인 이미지의 로고나 텍스트가 보이면 그것은 금지된 내용으로 간주하고 최종 이미지에 넣지 않는다.",
+                "참고 디자인 이미지 속 음식은 실제 메뉴가 아니다. 실제 음식은 메뉴 사진만 사용한다.",
+                "참고 디자인 이미지는 완성물을 따라 그리는 대상이 아니라 분위기와 레이아웃 방향을 이해하기 위한 참고 자료다.",
             ]
         )
     lines.extend(
