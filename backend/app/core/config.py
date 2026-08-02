@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     app_env: str = "local"
     web_origin: str = "http://localhost:5173"
     web_origins: str = ""
+    web_origin_regex: str = r"https://.*\.vercel\.app"
     database_url: str = "sqlite:///./mandrong.db"
     storage_root: Path = Path("../storage")
     max_upload_mb: int = 20
