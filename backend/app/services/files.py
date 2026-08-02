@@ -57,6 +57,7 @@ async def save_upload(project_id: uuid.UUID, upload: UploadFile, kind: str) -> d
         "width": width,
         "height": height,
         "checksum": digest,
+        "content": content,
         "original_filename": upload.filename,
     }
 

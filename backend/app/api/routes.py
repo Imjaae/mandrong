@@ -213,14 +213,19 @@ async def upload_asset(
 
 
 @router.get("/assets/{asset_id}/file")
-def get_asset_file(asset_id: uuid.UUID, db: Session = Depends(get_db)) -> FileResponse:
+def get_asset_file(asset_id: uuid.UUID, db: Session = Depends(get_db)) -> FileResponse | Response:
     asset = db.get(Asset, asset_id)
     if asset is None:
         raise api_error(404, "ASSET_NOT_FOUND", "파일을 찾지 못했어요.")
     path = full_path(asset.storage_path)
-    if not path.exists():
-        raise api_error(404, "ASSET_NOT_FOUND", "파일을 찾지 못했어요.")
-    return FileResponse(path, media_type=asset.mime_type, filename=asset.original_filename)
+    if path.exists():
+        return FileResponse(path, media_type=asset.mime_type, filename=asset.original_filename)
+    if asset.content:
+        return Response(
+            content=asset.content,
+            media_type=asset.mime_type,
+        )
+    raise api_error(404, "ASSET_NOT_FOUND", "파일을 찾지 못했어요.")
 
 
 @router.post("/projects/{project_id}/generations", response_model=JobOut, status_code=202)
@@ -388,5 +393,5 @@ def get_export_job(export_job_id: uuid.UUID, db: Session = Depends(get_db)) -> E
 
 
 @router.get("/exports/{asset_id}/download")
-def download_export(asset_id: uuid.UUID, db: Session = Depends(get_db)) -> FileResponse:
+def download_export(asset_id: uuid.UUID, db: Session = Depends(get_db)) -> FileResponse | Response:
     return get_asset_file(asset_id, db)

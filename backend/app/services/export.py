@@ -12,6 +12,17 @@ from app.models import Asset, AssetType, ExportFormat, ExportJob, GenerationVers
 from app.services.files import full_path, storage_root
 
 
+def _source_image_path(source: Asset, temp_dir: Path) -> Path:
+    source_path = full_path(source.storage_path)
+    if source_path.exists():
+        return source_path
+    if source.content:
+        restored_path = temp_dir / f"{source.id}.image"
+        restored_path.write_bytes(source.content)
+        return restored_path
+    raise RuntimeError("원본 이미지 파일을 찾지 못했어요.")
+
+
 def run_export_job(export_job_id: uuid.UUID) -> None:
     from app.db.session import SessionLocal
 
@@ -37,7 +48,8 @@ def run_export_job(export_job_id: uuid.UUID) -> None:
         relative = Path("exports") / str(job.project_id) / f"{job.id}.{suffix}"
         out_path = storage_root() / relative
 
-        with Image.open(full_path(source.storage_path)) as image:
+        source_path = _source_image_path(source, out_dir)
+        with Image.open(source_path) as image:
             if job.format == ExportFormat.png:
                 image.save(out_path, "PNG")
                 mime = "image/png"
@@ -49,6 +61,7 @@ def run_export_job(export_job_id: uuid.UUID) -> None:
                 mime = "application/pdf"
             else:
                 raise RuntimeError("지원하지 않는 형식입니다.")
+        content = out_path.read_bytes()
 
         asset = Asset(
             project_id=job.project_id,
@@ -57,7 +70,8 @@ def run_export_job(export_job_id: uuid.UUID) -> None:
             storage_path=str(relative),
             public_path=f"/api/v1/exports/{job.id}/download",
             mime_type=mime,
-            size_bytes=out_path.stat().st_size,
+            size_bytes=len(content),
+            content=content,
         )
         db.add(asset)
         db.flush()

@@ -80,6 +80,17 @@ def _prepare_openai_input_image(source_path: Path, temp_dir: Path, index: int) -
     return output_path
 
 
+def _asset_source_path(asset: Asset, temp_dir: Path, index: int) -> Path | None:
+    image_path = full_path(asset.storage_path)
+    if image_path.exists():
+        return image_path
+    if asset.content:
+        restored_path = temp_dir / f"source-{index}"
+        restored_path.write_bytes(asset.content)
+        return restored_path
+    return None
+
+
 def run_generation_job(job_id: uuid.UUID) -> None:
     ensure_storage_dirs()
     from app.db.session import SessionLocal
@@ -112,8 +123,8 @@ def run_generation_job(job_id: uuid.UUID) -> None:
                 with tempfile.TemporaryDirectory() as temp_name:
                     temp_dir = Path(temp_name)
                     for index, asset in enumerate(input_assets, start=1):
-                        image_path = full_path(asset.storage_path)
-                        if image_path.exists():
+                        image_path = _asset_source_path(asset, temp_dir, index)
+                        if image_path:
                             prepared_path = _prepare_openai_input_image(image_path, temp_dir, index)
                             image_files.append(prepared_path.open("rb"))
 
@@ -142,6 +153,7 @@ def run_generation_job(job_id: uuid.UUID) -> None:
 
         with Image.open(path) as image:
             width, height = image.size
+        content = path.read_bytes()
 
         asset_type = AssetType.generated_image if job.type != GenerationJobType.edit else AssetType.edited_image
         asset = Asset(
@@ -151,9 +163,10 @@ def run_generation_job(job_id: uuid.UUID) -> None:
             storage_path=str(relative),
             public_path=f"/api/v1/assets/{version_id}/file",
             mime_type="image/png",
-            size_bytes=path.stat().st_size,
+            size_bytes=len(content),
             width=width,
             height=height,
+            content=content,
         )
         db.add(asset)
         db.flush()
