@@ -1,0 +1,14 @@
+{
+  "name": "mandrong",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "yarn workspace @mandrong/web dev",
+    "build": "yarn workspace @mandrong/web build",
+    "test": "yarn workspace @mandrong/web test",
+    "test:e2e": "yarn workspace @mandrong/web test:e2e"
+  },
+  "packageManager": "yarn@1.22.22"
+}
