@@ -4,6 +4,7 @@ import base64
 import tempfile
 import uuid
 from datetime import datetime, timezone
+from io import BytesIO
 from pathlib import Path
 
 from openai import OpenAI
@@ -32,14 +33,11 @@ def _next_version_number(db: Session, project_id: uuid.UUID) -> int:
     return int(current or 0) + 1
 
 
-def _payload_asset_ids(job: GenerationJob) -> list[uuid.UUID]:
+def _payload_asset_ids(job: GenerationJob, keys: list[str]) -> list[uuid.UUID]:
     payload = job.request_payload or {}
-    raw_ids = [
-        *(payload.get("menu_asset_ids") or []),
-        *(payload.get("logo_asset_ids") or []),
-        *(payload.get("reference_asset_ids") or []),
-        *(payload.get("additional_asset_ids") or []),
-    ]
+    raw_ids = []
+    for key in keys:
+        raw_ids.extend(payload.get(key) or [])
     asset_ids: list[uuid.UUID] = []
     for raw_id in raw_ids:
         try:
@@ -49,7 +47,16 @@ def _payload_asset_ids(job: GenerationJob) -> list[uuid.UUID]:
     return asset_ids
 
 
-def _input_image_assets(db: Session, job: GenerationJob) -> list[Asset]:
+def _assets_from_payload(db: Session, job: GenerationJob, keys: list[str]) -> list[Asset]:
+    assets: list[Asset] = []
+    for asset_id in _payload_asset_ids(job, keys):
+        asset = db.get(Asset, asset_id)
+        if asset and asset.project_id == job.project_id:
+            assets.append(asset)
+    return assets
+
+
+def _openai_input_image_assets(db: Session, job: GenerationJob) -> list[Asset]:
     assets: list[Asset] = []
     if job.source_version_id:
         source = db.get(GenerationVersion, job.source_version_id)
@@ -58,10 +65,8 @@ def _input_image_assets(db: Session, job: GenerationJob) -> list[Asset]:
             if source_asset:
                 assets.append(source_asset)
 
-    for asset_id in _payload_asset_ids(job):
-        asset = db.get(Asset, asset_id)
-        if asset and asset.project_id == job.project_id:
-            assets.append(asset)
+    # Reference images are intentionally excluded. They may contain logos/text from other brands.
+    assets.extend(_assets_from_payload(db, job, ["menu_asset_ids", "additional_asset_ids"]))
 
     unique: dict[uuid.UUID, Asset] = {}
     for asset in assets:
@@ -98,6 +103,42 @@ def _asset_source_path(asset: Asset, temp_dir: Path, index: int) -> Path | None:
     return None
 
 
+def _open_asset_image(asset: Asset) -> Image.Image:
+    path = full_path(asset.storage_path)
+    if path.exists():
+        image = Image.open(path)
+    elif asset.content:
+        image = Image.open(BytesIO(asset.content))
+    else:
+        raise RuntimeError("로고 파일을 찾지 못했어요.")
+    image = ImageOps.exif_transpose(image)
+    image.load()
+    return image
+
+
+def _overlay_logo(db: Session, job: GenerationJob, output_path: Path) -> None:
+    logo_asset = next(iter(_assets_from_payload(db, job, ["logo_asset_ids"])), None)
+    if logo_asset is None:
+        return
+
+    with Image.open(output_path) as base_image:
+        canvas = ImageOps.exif_transpose(base_image).convert("RGBA")
+    logo = _open_asset_image(logo_asset).convert("RGBA")
+
+    alpha = logo.getchannel("A")
+    bbox = alpha.getbbox()
+    if bbox:
+        logo = logo.crop(bbox)
+
+    max_logo_width = max(96, int(canvas.width * 0.22))
+    max_logo_height = max(56, int(canvas.height * 0.10))
+    logo.thumbnail((max_logo_width, max_logo_height), Image.Resampling.LANCZOS)
+
+    padding = max(28, int(min(canvas.width, canvas.height) * 0.04))
+    canvas.alpha_composite(logo, (padding, padding))
+    canvas.convert("RGB").save(output_path, "PNG", optimize=True)
+
+
 def run_generation_job(job_id: uuid.UUID) -> None:
     ensure_storage_dirs()
     from app.db.session import SessionLocal
@@ -124,7 +165,7 @@ def run_generation_job(job_id: uuid.UUID) -> None:
         settings = get_settings()
         if settings.openai_api_key:
             client = OpenAI(api_key=settings.openai_api_key)
-            input_assets = _input_image_assets(db, job)
+            input_assets = _openai_input_image_assets(db, job)
             image_files = []
             try:
                 with tempfile.TemporaryDirectory() as temp_name:
@@ -157,6 +198,8 @@ def run_generation_job(job_id: uuid.UUID) -> None:
             path.write_bytes(base64.b64decode(image_b64))
         else:
             create_placeholder_image(path, brief.width, brief.height, brief.primary_copy)
+
+        _overlay_logo(db, job, path)
 
         with Image.open(path) as image:
             width, height = image.size

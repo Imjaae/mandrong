@@ -11,6 +11,9 @@ const message = ref('홍보물을 만들고 있어요')
 const detailIndex = ref(0)
 const error = ref('')
 let detailTimer = 0
+let pollTimer = 0
+const pollStartedAt = ref(0)
+const pollTimeoutMs = 12 * 60 * 1000
 
 const details = [
   '첨부한 메뉴 사진의 색감과 질감을 읽고 있어요',
@@ -19,23 +22,66 @@ const details = [
   '완성 이미지를 마지막으로 다듬고 있어요',
 ]
 
+function stopPolling() {
+  if (pollTimer) {
+    window.clearInterval(pollTimer)
+    pollTimer = 0
+  }
+}
+
+async function checkJob(jobId: string) {
+  const job = await api.getGenerationJob(jobId)
+  if (job.status === 'succeeded' && job.version_id) {
+    stopPolling()
+    draft.activeGenerationProjectId = ''
+    draft.activeGenerationJobId = ''
+    router.push(`/projects/${route.params.id}/result/${job.version_id}`)
+    return true
+  }
+  if (job.status === 'failed') {
+    stopPolling()
+    draft.activeGenerationProjectId = ''
+    draft.activeGenerationJobId = ''
+    error.value = job.error?.message ?? '이미지 생성에 실패했어요.'
+    return true
+  }
+  return false
+}
+
 async function poll(jobId: string) {
-  const timer = window.setInterval(async () => {
+  pollStartedAt.value = Date.now()
+  const finished = await checkJob(jobId).catch((err) => {
+    error.value = err instanceof Error ? err.message : '생성 상태를 확인하지 못했어요.'
+    return true
+  })
+  if (finished) return
+
+  pollTimer = window.setInterval(async () => {
+    if (Date.now() - pollStartedAt.value > pollTimeoutMs) {
+      stopPolling()
+      error.value = '생성이 예상보다 오래 걸리고 있어요. 히스토리에서 결과를 다시 확인하거나 새로 시작해주세요.'
+      return
+    }
     try {
-      const job = await api.getGenerationJob(jobId)
-      if (job.status === 'succeeded' && job.version_id) {
-        window.clearInterval(timer)
-        router.push(`/projects/${route.params.id}/result/${job.version_id}`)
-      }
-      if (job.status === 'failed') {
-        window.clearInterval(timer)
-        error.value = job.error?.message ?? '이미지 생성에 실패했어요.'
-      }
+      await checkJob(jobId)
     } catch (err) {
-      window.clearInterval(timer)
+      stopPolling()
       error.value = err instanceof Error ? err.message : '생성 상태를 확인하지 못했어요.'
     }
-  }, 2000)
+  }, 4000)
+}
+
+async function startGeneration(projectId: string, forceNew = false) {
+  error.value = ''
+  if (!forceNew && draft.activeGenerationProjectId === projectId && draft.activeGenerationJobId) {
+    await poll(draft.activeGenerationJobId)
+    return
+  }
+  const job = await api.createGeneration(projectId, draft.menuAssetIds, draft.logoAssetIds, draft.referenceAssetIds)
+  draft.activeGenerationProjectId = projectId
+  draft.activeGenerationJobId = job.job_id
+  draft.saveLocalDraft()
+  await poll(job.job_id)
 }
 
 onMounted(async () => {
@@ -44,8 +90,7 @@ onMounted(async () => {
   }, 2600)
   try {
     const projectId = String(route.params.id)
-    const job = await api.createGeneration(projectId, draft.menuAssetIds, draft.logoAssetIds, draft.referenceAssetIds)
-    await poll(job.job_id)
+    await startGeneration(projectId)
   } catch (err) {
     error.value = err instanceof Error ? err.message : '생성을 시작하지 못했어요.'
   }
@@ -53,6 +98,7 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.clearInterval(detailTimer)
+  stopPolling()
 })
 </script>
 
@@ -87,7 +133,13 @@ onUnmounted(() => {
           {{ item }}
         </div>
       </div>
-      <p v-if="error" class="mt-6 rounded-lg border border-mandrong-danger/40 bg-mandrong-danger/10 p-4 text-mandrong-danger">{{ error }}</p>
+      <div v-if="error" class="mt-6 rounded-lg border border-mandrong-danger/40 bg-mandrong-danger/10 p-4 text-mandrong-danger">
+        <p>{{ error }}</p>
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button class="rounded-lg border border-mandrong-danger/50 px-4 py-2 text-sm text-mandrong-text" @click="router.push('/')">홈으로</button>
+          <button class="rounded-lg border border-mandrong-danger/50 px-4 py-2 text-sm text-mandrong-text" @click="startGeneration(String(route.params.id), true)">새로 생성</button>
+        </div>
+      </div>
     </section>
   </main>
 </template>

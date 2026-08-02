@@ -17,6 +17,7 @@ def test_build_initial_prompt_preserves_required_copy() -> None:
     assert "오늘 점심은 갈비탕" in prompt
     assert "9,900원" in prompt
     assert "메뉴 사진" in prompt
-    assert "로고 이미지" in prompt
+    assert "로고를 새로 그리거나" in prompt
+    assert "절대 복사하지 않는다" in prompt
     assert "누락하면 실패" in prompt
     assert "gpt-image-2" not in prompt

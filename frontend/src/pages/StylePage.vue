@@ -33,6 +33,8 @@ async function submit() {
     draft.menuAssetIds = []
     draft.logoAssetIds = []
     draft.referenceAssetIds = []
+    draft.activeGenerationProjectId = ''
+    draft.activeGenerationJobId = ''
     for (const file of draft.menuFiles) {
       const asset = await api.uploadAsset(project.id, 'menu_photo', file)
       draft.menuAssetIds.push(asset.id)

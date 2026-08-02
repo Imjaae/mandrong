@@ -60,6 +60,8 @@ export const useDraftStore = defineStore('draft', {
     menuAssetIds: [] as string[],
     logoAssetIds: [] as string[],
     referenceAssetIds: [] as string[],
+    activeGenerationProjectId: '',
+    activeGenerationJobId: '',
   }),
   getters: {
     size(state) {
