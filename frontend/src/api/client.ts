@@ -1,6 +1,9 @@
 import type { AnnotationDraft, Asset, CreativeBrief, GenerationJob, Project, Version } from '../types/api'
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? ''
+const DEPLOYED_API_BASE = 'https://mandrong.onrender.com'
+const configuredApiBase = import.meta.env.VITE_API_BASE as string | undefined
+const API_BASE = configuredApiBase
+  || (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app') ? DEPLOYED_API_BASE : '')
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
