@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import hashlib
 import uuid
+from io import BytesIO
 from pathlib import Path
 
 from fastapi import UploadFile
-from PIL import Image
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app.core.config import get_settings
 
@@ -37,18 +38,20 @@ async def save_upload(project_id: uuid.UUID, upload: UploadFile, kind: str) -> d
     if len(content) > max_bytes:
         raise ValueError("UPLOAD_TOO_LARGE")
 
+    width = height = None
+    try:
+        with Image.open(BytesIO(content)) as image:
+            image = ImageOps.exif_transpose(image)
+            image.load()
+            width, height = image.size
+    except (UnidentifiedImageError, OSError):
+        raise ValueError("UNSUPPORTED_FILE_TYPE") from None
+
     digest = hashlib.sha256(content).hexdigest()
     relative = Path("uploads") / str(project_id) / f"{uuid.uuid4()}{suffix}"
     path = storage_root() / relative
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(content)
-
-    width = height = None
-    try:
-        with Image.open(path) as image:
-            width, height = image.size
-    except Exception:
-        pass
 
     return {
         "storage_path": str(relative),

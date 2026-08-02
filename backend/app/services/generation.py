@@ -70,14 +70,20 @@ def _input_image_assets(db: Session, job: GenerationJob) -> list[Asset]:
 
 
 def _prepare_openai_input_image(source_path: Path, temp_dir: Path, index: int) -> Path:
-    output_path = temp_dir / f"input-{index}.png"
+    output_path = temp_dir / f"input-{index}.jpg"
     with Image.open(source_path) as image:
         image = ImageOps.exif_transpose(image)
-        if image.mode not in {"RGB", "RGBA"}:
-            image = image.convert("RGBA")
+        image.load()
+        if image.mode in {"RGBA", "LA"} or (image.mode == "P" and "transparency" in image.info):
+            rgba = image.convert("RGBA")
+            background = Image.new("RGBA", rgba.size, "#FFFFFF")
+            background.alpha_composite(rgba)
+            image = background.convert("RGB")
+        elif image.mode != "RGB":
+            image = image.convert("RGB")
         if max(image.size) > 2048:
             image.thumbnail((2048, 2048), Image.Resampling.LANCZOS)
-        image.save(output_path, format="PNG", optimize=True)
+        image.save(output_path, format="JPEG", quality=95, optimize=True)
     return output_path
 
 
