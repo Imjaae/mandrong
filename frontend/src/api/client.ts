@@ -1,4 +1,4 @@
-import type { AnnotationDraft, Asset, CreativeBrief, GenerationJob, Project, Version } from '../types/api'
+import type { AnnotationDraft, Asset, CreativeBrief, ExportJob, GenerationJob, Project, Version } from '../types/api'
 
 export const DEPLOYED_API_BASE = 'https://mandrong.onrender.com'
 const configuredApiBase = import.meta.env.VITE_API_BASE as string | undefined
@@ -95,5 +95,8 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ format, quality: 90 }),
     })
+  },
+  getExportJob(exportJobId: string) {
+    return request<ExportJob>(`/api/v1/export-jobs/${exportJobId}`)
   },
 }

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Download, Expand, History, MessageSquare, Rows3, X } from 'lucide-vue-next'
 import { api, apiUrl } from '../api/client'
@@ -10,19 +10,78 @@ const route = useRoute()
 const router = useRouter()
 const store = useProjectStore()
 const exportError = ref('')
+const exportMessage = ref('')
+const exportingFormat = ref<'png' | 'jpeg' | 'pdf' | ''>('')
 const fullView = ref(false)
 const imageSrc = computed(() => store.currentVersion ? apiUrl(store.currentVersion.image_url) : '')
+let exportTimer = 0
 
 onMounted(() => {
   store.loadVersion(String(route.params.versionId))
 })
 
+onUnmounted(() => {
+  if (exportTimer) {
+    window.clearInterval(exportTimer)
+  }
+})
+
+function triggerDownload(url: string, format: 'png' | 'jpeg' | 'pdf') {
+  const link = document.createElement('a')
+  link.href = apiUrl(url)
+  link.download = `mandrong-${String(route.params.versionId).slice(0, 8)}.${format === 'jpeg' ? 'jpg' : format}`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
+
+async function waitForExport(exportJobId: string, format: 'png' | 'jpeg' | 'pdf') {
+  const startedAt = Date.now()
+  if (exportTimer) {
+    window.clearInterval(exportTimer)
+  }
+  exportTimer = window.setInterval(async () => {
+    if (Date.now() - startedAt > 120000) {
+      window.clearInterval(exportTimer)
+      exportTimer = 0
+      exportingFormat.value = ''
+      exportError.value = '다운로드 준비가 예상보다 오래 걸리고 있어요. 잠시 뒤 다시 시도해주세요.'
+      return
+    }
+    try {
+      const job = await api.getExportJob(exportJobId)
+      if (job.status === 'succeeded' && job.download_url) {
+        window.clearInterval(exportTimer)
+        exportTimer = 0
+        exportingFormat.value = ''
+        exportMessage.value = '다운로드를 시작했어요.'
+        triggerDownload(job.download_url, format)
+      }
+      if (job.status === 'failed') {
+        window.clearInterval(exportTimer)
+        exportTimer = 0
+        exportingFormat.value = ''
+        exportError.value = job.error?.message ?? '다운로드 파일을 만들지 못했어요.'
+      }
+    } catch (err) {
+      window.clearInterval(exportTimer)
+      exportTimer = 0
+      exportingFormat.value = ''
+      exportError.value = err instanceof Error ? err.message : '다운로드 상태를 확인하지 못했어요.'
+    }
+  }, 1500)
+}
+
 async function download(format: 'png' | 'jpeg' | 'pdf') {
   exportError.value = ''
+  exportMessage.value = ''
+  exportingFormat.value = format
   try {
     const job = await api.createExport(String(route.params.versionId), format)
-    exportError.value = `다운로드 파일을 준비하고 있어요. 작업 ID: ${job.export_job_id}`
+    exportMessage.value = '다운로드 파일을 준비하고 있어요.'
+    await waitForExport(job.export_job_id, format)
   } catch (err) {
+    exportingFormat.value = ''
     exportError.value = err instanceof Error ? err.message : '다운로드를 준비하지 못했어요.'
   }
 }
@@ -58,11 +117,12 @@ async function download(format: 'png' | 'jpeg' | 'pdf') {
       <div class="border-t border-mandrong-line pt-3 sm:pt-4">
         <p class="mb-2 font-medium">다운로드</p>
         <div class="grid grid-cols-3 gap-2">
-          <button class="rounded-lg border border-mandrong-line bg-[#111412] py-2 text-sm transition hover:border-mandrong-primary" @click="download('png')">PNG</button>
-          <button class="rounded-lg border border-mandrong-line bg-[#111412] py-2 text-sm transition hover:border-mandrong-primary" @click="download('jpeg')">JPEG</button>
-          <button class="rounded-lg border border-mandrong-line bg-[#111412] py-2 text-sm transition hover:border-mandrong-primary" @click="download('pdf')">PDF</button>
+          <button class="rounded-lg border border-mandrong-line bg-[#111412] py-2 text-sm transition hover:border-mandrong-primary disabled:cursor-wait disabled:opacity-60" :disabled="!!exportingFormat" @click="download('png')">{{ exportingFormat === 'png' ? '준비 중' : 'PNG' }}</button>
+          <button class="rounded-lg border border-mandrong-line bg-[#111412] py-2 text-sm transition hover:border-mandrong-primary disabled:cursor-wait disabled:opacity-60" :disabled="!!exportingFormat" @click="download('jpeg')">{{ exportingFormat === 'jpeg' ? '준비 중' : 'JPEG' }}</button>
+          <button class="rounded-lg border border-mandrong-line bg-[#111412] py-2 text-sm transition hover:border-mandrong-primary disabled:cursor-wait disabled:opacity-60" :disabled="!!exportingFormat" @click="download('pdf')">{{ exportingFormat === 'pdf' ? '준비 중' : 'PDF' }}</button>
         </div>
-        <p v-if="exportError" class="mt-3 text-sm text-mandrong-muted"><Download class="mr-1 inline h-4 w-4" />{{ exportError }}</p>
+        <p v-if="exportMessage" class="mt-3 text-sm text-mandrong-muted"><Download class="mr-1 inline h-4 w-4" />{{ exportMessage }}</p>
+        <p v-if="exportError" class="mt-3 text-sm text-mandrong-danger">{{ exportError }}</p>
       </div>
     </aside>
     <Teleport to="body">

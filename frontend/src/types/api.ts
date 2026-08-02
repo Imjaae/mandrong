@@ -46,6 +46,14 @@ export interface GenerationJob {
   error: { code: string; message: string } | null
 }
 
+export interface ExportJob {
+  id: string
+  status: string
+  asset_id: string | null
+  download_url: string | null
+  error: { code: string; message: string } | null
+}
+
 export interface Version {
   id: string
   project_id: string

@@ -404,4 +404,17 @@ def get_export_job(export_job_id: uuid.UUID, db: Session = Depends(get_db)) -> E
 
 @router.get("/exports/{asset_id}/download")
 def download_export(asset_id: uuid.UUID, db: Session = Depends(get_db)) -> FileResponse | Response:
-    return get_asset_file(asset_id, db)
+    asset = db.get(Asset, asset_id)
+    if asset is None:
+        raise api_error(404, "ASSET_NOT_FOUND", "파일을 찾지 못했어요.")
+    path = full_path(asset.storage_path)
+    filename = asset.original_filename or f"mandrong-{asset.id}"
+    if path.exists():
+        return FileResponse(path, media_type=asset.mime_type, filename=filename)
+    if asset.content:
+        return Response(
+            content=asset.content,
+            media_type=asset.mime_type,
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+    raise api_error(404, "ASSET_NOT_FOUND", "파일을 찾지 못했어요.")
