@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: mandrong-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: ./start.sh
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: STORAGE_ROOT
+        value: /opt/render/project/src/storage
+      - key: MAX_UPLOAD_MB
+        value: 20
+      - key: DATABASE_URL
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: WEB_ORIGINS
+        sync: false
