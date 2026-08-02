@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { apiUrl } from '../api/client'
 import { useProjectStore } from '../stores/project'
 
 const route = useRoute()
@@ -25,7 +26,7 @@ onMounted(() => store.loadVersions(String(route.params.id)))
         @click="router.push(`/projects/${route.params.id}/result/${version.id}`)"
       >
         <div class="flex h-24 min-h-0 items-center justify-center overflow-hidden rounded-lg bg-[#101311] sm:h-[calc(100%-52px)]">
-          <img :src="version.image_url" :alt="`버전 ${version.version_number}`" class="max-h-full max-w-full object-contain" />
+          <img :src="apiUrl(version.image_url)" :alt="`버전 ${version.version_number}`" class="max-h-full max-w-full object-contain" />
         </div>
         <span class="min-w-0">
           <strong class="mt-1 block sm:mt-3">버전 {{ version.version_number }}</strong>

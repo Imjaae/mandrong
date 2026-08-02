@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ArrowRight, BookOpen, Check, FileText, Image, Instagram, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-vue-next'
-import { api } from '../api/client'
+import { api, apiUrl } from '../api/client'
 import PrimaryButton from '../components/PrimaryButton.vue'
 import { useDraftStore } from '../stores/draft'
 import type { Project, Purpose } from '../types/api'
@@ -151,7 +151,7 @@ async function deleteProject(project: Project) {
           @click="openProject(project)"
         >
           <span class="h-12 overflow-hidden rounded-md border border-mandrong-line bg-[#101311] sm:h-14 md:h-12">
-            <img v-if="project.current_image_url" :src="project.current_image_url" alt="" class="h-full w-full object-cover" />
+            <img v-if="project.current_image_url" :src="apiUrl(project.current_image_url)" alt="" class="h-full w-full object-cover" />
           </span>
           <span class="min-w-0">
             <strong v-if="renamingId !== project.id" class="block truncate">{{ project.title }}</strong>

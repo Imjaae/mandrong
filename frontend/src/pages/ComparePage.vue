@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { api } from '../api/client'
+import { api, apiUrl } from '../api/client'
 import PrimaryButton from '../components/PrimaryButton.vue'
 import type { Version } from '../types/api'
 
@@ -58,7 +58,7 @@ function editSelected() {
           <span v-if="selected === 'before'" class="rounded-full bg-mandrong-primary/10 px-3 py-1 text-xs font-semibold text-mandrong-primary">선택됨</span>
         </span>
         <span class="flex min-h-0 items-center justify-center overflow-hidden rounded-lg bg-[#101311]">
-          <img v-if="before" :src="before.image_url" alt="수정 전" class="max-h-full max-w-full object-contain" />
+          <img v-if="before" :src="apiUrl(before.image_url)" alt="수정 전" class="max-h-full max-w-full object-contain" />
         </span>
       </button>
       <button
@@ -74,7 +74,7 @@ function editSelected() {
           <span v-if="selected === 'after'" class="rounded-full bg-mandrong-primary/10 px-3 py-1 text-xs font-semibold text-mandrong-primary">선택됨</span>
         </span>
         <span class="flex min-h-0 items-center justify-center overflow-hidden rounded-lg bg-[#101311]">
-          <img v-if="after" :src="after.image_url" alt="수정 후" class="max-h-full max-w-full object-contain" />
+          <img v-if="after" :src="apiUrl(after.image_url)" alt="수정 후" class="max-h-full max-w-full object-contain" />
         </span>
       </button>
     </div>

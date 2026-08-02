@@ -1,9 +1,15 @@
 import type { AnnotationDraft, Asset, CreativeBrief, GenerationJob, Project, Version } from '../types/api'
 
-const DEPLOYED_API_BASE = 'https://mandrong.onrender.com'
+export const DEPLOYED_API_BASE = 'https://mandrong.onrender.com'
 const configuredApiBase = import.meta.env.VITE_API_BASE as string | undefined
-const API_BASE = configuredApiBase
+export const API_BASE = configuredApiBase
   || (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app') ? DEPLOYED_API_BASE : '')
+
+export function apiUrl(path: string | null | undefined) {
+  if (!path) return ''
+  if (path.startsWith('http://') || path.startsWith('https://')) return path
+  return `${API_BASE}${path}`
+}
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {

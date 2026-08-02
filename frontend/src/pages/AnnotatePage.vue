@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { api } from '../api/client'
+import { api, apiUrl } from '../api/client'
 import FileUploadBox from '../components/FileUploadBox.vue'
 import ImagePreview from '../components/ImagePreview.vue'
 import PrimaryButton from '../components/PrimaryButton.vue'
@@ -18,7 +18,7 @@ const editText = ref('')
 const additionalFiles = ref<File[]>([])
 const error = ref('')
 const submitting = ref(false)
-const imageSrc = computed(() => store.currentVersion ? `${store.currentVersion.image_url}` : '')
+const imageSrc = computed(() => store.currentVersion ? apiUrl(store.currentVersion.image_url) : '')
 const canSubmit = computed(() => annotations.value.length > 0 || editText.value.trim().length > 0 || additionalFiles.value.length > 0)
 
 onMounted(() => store.loadVersion(String(route.params.versionId)))
