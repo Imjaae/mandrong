@@ -212,8 +212,8 @@ async def upload_asset(
     )
 
 
-@router.get("/assets/{asset_id}/file")
-def get_asset_file(asset_id: uuid.UUID, db: Session = Depends(get_db)) -> FileResponse | Response:
+@router.get("/assets/{asset_id}/file", response_model=None)
+def get_asset_file(asset_id: uuid.UUID, db: Session = Depends(get_db)) -> Response:
     asset = db.get(Asset, asset_id)
     if asset is None:
         raise api_error(404, "ASSET_NOT_FOUND", "파일을 찾지 못했어요.")
@@ -402,8 +402,8 @@ def get_export_job(export_job_id: uuid.UUID, db: Session = Depends(get_db)) -> E
     )
 
 
-@router.get("/exports/{asset_id}/download")
-def download_export(asset_id: uuid.UUID, db: Session = Depends(get_db)) -> FileResponse | Response:
+@router.get("/exports/{asset_id}/download", response_model=None)
+def download_export(asset_id: uuid.UUID, db: Session = Depends(get_db)) -> Response:
     asset = db.get(Asset, asset_id)
     if asset is None:
         raise api_error(404, "ASSET_NOT_FOUND", "파일을 찾지 못했어요.")
