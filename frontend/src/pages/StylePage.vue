@@ -12,7 +12,8 @@ const draft = useDraftStore()
 const loading = ref(false)
 const error = ref('')
 const moods = ['깔끔한', '따뜻한', '고급스러운', '활기찬', '전통적인', '귀여운', '프리미엄', '가성비 좋은']
-const canSubmit = computed(() => draft.mood_keywords.length > 0 || draft.mood_text.trim().length > 0)
+const hasCopy = computed(() => draft.promotionText.trim().length > 0)
+const canSubmit = computed(() => hasCopy.value && (draft.mood_keywords.length > 0 || draft.mood_text.trim().length > 0))
 
 function toggleMood(mood: string) {
   draft.mood_keywords = draft.mood_keywords.includes(mood)
@@ -25,6 +26,11 @@ function setReferenceFiles(files: File[]) {
 }
 
 async function submit() {
+  if (!hasCopy.value) {
+    error.value = '홍보 문구를 먼저 입력해주세요.'
+    router.push('/projects/new/copy')
+    return
+  }
   loading.value = true
   error.value = ''
   try {

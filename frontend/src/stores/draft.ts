@@ -77,7 +77,7 @@ export const useDraftStore = defineStore('draft', {
       const size = this.size
       const text = state.promotionText.trim()
       const firstLine = text.split('\n').find((line) => line.trim().length > 0)?.trim() ?? ''
-      const primaryCopy = firstLine.slice(0, 80) || text.slice(0, 80)
+      const primaryCopy = firstLine.slice(0, 80) || text.slice(0, 80) || '새 홍보물'
       return {
         purpose: state.purpose,
         width: size.width,

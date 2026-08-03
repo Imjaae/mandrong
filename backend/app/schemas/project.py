@@ -16,7 +16,7 @@ class CreativeBriefIn(BaseModel):
     purpose: str
     width: int = Field(gt=0)
     height: int = Field(gt=0)
-    primary_copy: str = Field(min_length=1, max_length=80)
+    primary_copy: str = Field(default="", max_length=120)
     secondary_copy: str | None = None
     price_copy: str | None = Field(default=None, max_length=120)
     notice_copy: str | None = Field(default=None, max_length=240)
@@ -32,6 +32,13 @@ class CreativeBriefIn(BaseModel):
     @classmethod
     def image_size_must_match_model_step(cls, value: int) -> int:
         return validate_image_size(value)
+
+    @model_validator(mode="after")
+    def ensure_primary_copy(self) -> "CreativeBriefIn":
+        if not self.primary_copy.strip():
+            fallback = (self.secondary_copy or self.menu_name or self.store_name or "새 홍보물").strip()
+            self.primary_copy = fallback[:120] or "새 홍보물"
+        return self
 
 
 class ProjectCreate(BaseModel):
