@@ -7,9 +7,7 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 def validate_image_size(value: int) -> int:
     if value < 256 or value > 4096:
         raise ValueError("이미지 크기는 256px 이상 4096px 이하로 입력해주세요.")
-    if value % 16 != 0:
-        raise ValueError("이미지 크기는 16px 단위여야 합니다.")
-    return value
+    return min(((value + 15) // 16) * 16, 4096)
 
 
 class CreativeBriefIn(BaseModel):

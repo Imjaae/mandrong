@@ -2,11 +2,11 @@ import { defineStore } from 'pinia'
 import type { CreativeBrief, Purpose } from '../types/api'
 
 export const defaultSizes = {
-  poster: { width: 1080, height: 1350 },
-  banner: { width: 1920, height: 1080 },
+  poster: { width: 1088, height: 1360 },
+  banner: { width: 1920, height: 1088 },
   menu_board: { width: 1200, height: 1600 },
-  sns_square: { width: 1080, height: 1080 },
-  sns_story: { width: 1080, height: 1920 },
+  sns_square: { width: 1088, height: 1088 },
+  sns_story: { width: 1088, height: 1920 },
   x_banner: { width: 608, height: 1808 },
 } satisfies Record<Purpose, { width: number; height: number }>
 
@@ -20,11 +20,11 @@ export const purposeLabels: Record<Purpose, string> = {
 }
 
 export const displaySizes = {
-  poster: '1080x1350',
-  banner: '1920x1080',
+  poster: '1088x1360',
+  banner: '1920x1088',
   menu_board: '1200x1600',
-  sns_square: '1080x1080',
-  sns_story: '1080x1920',
+  sns_square: '1088x1088',
+  sns_story: '1088x1920',
   x_banner: '600x1800 기준',
 } satisfies Record<Purpose, string>
 
@@ -38,8 +38,8 @@ export const useDraftStore = defineStore('draft', {
     title: '새 홍보물',
     purpose: 'poster' as Purpose,
     sizeMode: 'preset' as 'preset' | 'custom',
-    customWidth: 1080,
-    customHeight: 1350,
+    customWidth: 1088,
+    customHeight: 1360,
     promotionText: '',
     primary_copy: '',
     secondary_copy: '',
